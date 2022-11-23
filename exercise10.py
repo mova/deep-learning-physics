@@ -27,14 +27,22 @@ n_test=10000
 ds_train, ds_test= ds[:-n_test], ds[-n_test:]
 # %%
 
+# Data Handling of Graphs [https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html]
+# A graph is used to model pairwise relations (edges) between objects (nodes). A single graph in PyG is described by an instance of torch_geometric.data.Data, which holds the following attributes by default:
+#     data.x: Node feature matrix with shape [num_nodes, num_node_features]
+#     data.edge_index: Graph connectivity in COO format with shape [2, num_edges] and type torch.long
+#     data.edge_attr: Edge feature matrix with shape [num_edges, num_edge_features]
+#     data.y: Target to train against (may have arbitrary shape), e.g., node-level targets of shape [num_nodes, *] or graph-level targets of shape [1, *]
+#     data.pos: Node position matrix with shape [num_nodes, num_dimensions]
+
 # %% [markdown]
 # Extract a single event from the test dataset.
 # Inspect are the properties of the event accessable?
 # You can use the `inspect` method of the rich library or a simple `print`
 
 example_map = ds_test[0]
-import rich
-rich.inspect(example_map)
+# import rich
+# rich.inspect(example_map)
 # %%
 # %% [markdown]
 # Plot an example sky map using the `skymap` function from `utils`
@@ -91,7 +99,7 @@ class FFN(nn.Module):
             nn.LeakyReLU(0.1),
         )
     
-    def forward(*args, **kwargs):
+    def forward(self,*args, **kwargs):
         return self.seq(*args, **kwargs)
 
 # %% [markdown]
@@ -118,9 +126,34 @@ class FFN(nn.Module):
 # model = keras.models.Model([points_input, feats_input], out)
 # print(model.summary())
 from torch_geometric.nn.conv import EdgeConv
-from torch_geometric.nn.conv import EdgeConv
+from torch_geometric.nn import knn_graph
+
+class GNN(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv1=EdgeConv(FFN(1,5))
+        self.conv2=EdgeConv(FFN(5,5))
+        self.out = FFN(5,1)
+    
+    def forward(self,batch:Batch):
+        # We run knn on the positions 
+        # knn needs to know about the batches, otherwise it connects 
+        # points from different events
+        edge_index = knn_graph(batch.pos, batch=batch.batch, k=10)
+        batch.x = self.conv1(batch.x,edge_index=edge_index)
+        batch.x = self.conv2(batch.x,edge_index=edge_index)
+        batch.x = self.out(batch.x)
 
 
+# %%
+from torch_geometric.loader import DataLoader
+loader = DataLoader(ds_train, batch_size=32)
+model = GNN()
+for batch in loader:
+    foo = model(batch)
+    break
+#%%
+# %%
 # %% [markdown]
 # You can inspect the kernel network using:
 
@@ -162,8 +195,8 @@ history = model.fit(train_input_data, y_train, batch_size=64, epochs=4)
 
 # %%
 import sys
-!{sys.executable} -m pip install sklearn
-!{sys.executable} -m pip install networkx
+# !{sys.executable} -m pip install sklearn
+# !{sys.executable} -m pip install networkx
 
 # %%
 import tensorflow.keras.backend as K
