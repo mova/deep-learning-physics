@@ -11,88 +11,39 @@
 # Training graph networks can be computationally demanding, thus, we recommend to use a GPU for this task.
 
 # %%
-from tensorflow import keras
+import torch
+from torch import nn
+from torch_geometric.data import Data, Batch
 import numpy as np
 from matplotlib import pyplot as plt
-
-layers = keras.layers
-
-print("keras", keras.__version__)
-
-# %% [markdown]
-# #### Download EdgeConv Layer
-
-# %%
-import gdown
-import os
-
-url = "https://raw.githubusercontent.com/DeepLearningForPhysicsResearchBook/deep-learning-physics/main/edgeconv.py"
-output = 'edgeconv.py'
-
-if os.path.exists(output) == False:
-    gdown.download(url, output, quiet=False)
-
-from edgeconv import EdgeConv
 
 # %% [markdown]
 # ### Download Data
 
 # %%
-url = "https://drive.google.com/u/0/uc?export=download&confirm=HgGH&id=1XKN-Ik7BDyMWdQ230zWS2bNxXL3_9jZq"
-output = 'cr_sphere.npz'
-
-if os.path.exists(output) == False:
-    gdown.download(url, output, quiet=True)
-
+from  utils import CosmicRayDS
+ds = CosmicRayDS(".")
+n_test=10000
+ds_train, ds_test= ds[:-n_test], ds[-n_test:]
 # %%
-f = np.load(output)
-n_train = 10000
-x_train, x_test = f['data'][:-n_train], f['data'][-n_train:]
-labels = keras.utils.to_categorical(f['label'], num_classes=2)
-y_train, y_test = labels[:-n_train], labels[-n_train:]
-
-# %%
-print("x_train.shape", x_train.shape)
-print("y_train.shape", y_train.shape)
-
-# %%
-# define coordinates for very first EdgeConv
-train_points, test_points = x_train[..., :3], x_test[..., :3]
-
-# Use normalized Energy as features for convolutional layers
-train_features, test_features = x_train[..., -1, np.newaxis], x_test[..., -1, np.newaxis]
-train_features = np.concatenate([train_features, train_points], axis=-1)
-
-train_input_data = [train_points, train_features]
-test_input_data = [test_points, test_features]
 
 # %% [markdown]
-# ### Plot an example sky map
+# Extract a single event from the test dataset.
+# Inspect are the properties of the event accessable?
+# You can use the `inspect` method of the rich library or a simple `print`
+
+example_map = ds_test[0]
+import rich
+rich.inspect(example_map)
+# %%
+# %% [markdown]
+# Plot an example sky map using the `skymap` function from `utils`
+from  utils import skymap
+
+fig = skymap(example_map.pos.T, c=example_map.x, zlabel="Energy (normed)", title = "Event 0")
 
 # %%
-def scatter(v, c=None, zlabel="", title="", **kwargs):
 
-    def vec2ang(v):
-        x, y, z = np.asarray(v)
-        phi = np.arctan2(y, x)
-        theta = np.arctan2(z, (x * x + y * y) ** .5)
-        return phi, theta
-
-    lons, lats = vec2ang(v)
-    lons = -lons
-    fig = plt.figure(figsize=kwargs.pop('figsize', [12, 6]))
-    ax = fig.add_axes([0.1, 0.1, 0.85, 0.9], projection="hammer")
-    events = ax.scatter(lons, lats, c=c, s=12, lw=2)
-
-    cbar = plt.colorbar(events, orientation='horizontal', shrink=0.85, pad=0.05, aspect=30, label=zlabel)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    return fig
-
-
-test_id = 0
-example_map = x_test[test_id]
-fig = scatter(example_map[:, 0:3].T, c=example_map[:, 3], zlabel="Energy (normed)", title = "Event %i" % test_id)
 
 # %% [markdown]
 # ### Design DGCNN
@@ -109,21 +60,39 @@ fig = scatter(example_map[:, 0:3].T, c=example_map[:, 3], zlabel="Energy (normed
 # <em> In this case, we perform subtraction and concatenate the result with the central pixel value to combine translational invariance with local information. </em>
 
 # %%
-def kernel_nn(data, nodes=16):
-    d1, d2 = data  # get xi ("central" pixel) and xj ("neighborhood" pixels)
+# def kernel_nn(data, nodes=16):
+#     d1, d2 = data  # get xi ("central" pixel) and xj ("neighborhood" pixels)
 
-    dif = layers.Subtract()([d1, d2])  # perform substraction for translational invariance
-    x = layers.Concatenate(axis=-1)([d1, dif])  # add information on the absolute pixel value
+#     dif = layers.Subtract()([d1, d2])  # perform substraction for translational invariance
+#     x = layers.Concatenate(axis=-1)([d1, dif])  # add information on the absolute pixel value
 
-    x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
-    x = layers.BatchNormalization()(x)
+#     x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
+#     x = layers.BatchNormalization()(x)
 
-    x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
-    x = layers.BatchNormalization()(x)
+#     x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
+#     x = layers.BatchNormalization()(x)
 
-    x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
-    x = layers.BatchNormalization()(x)
-    return x
+#     x = layers.Dense(nodes, use_bias=False, activation="relu")(x)
+#     x = layers.BatchNormalization()(x)
+#     return x
+
+class FFN(nn.Module):
+    def __init__(self,n_in, n_out, n_hidden=20) -> None:
+        super().__init__()
+        self.seq = nn.Sequential(
+            nn.Linear(n_in,n_hidden),
+            nn.BatchNorm1d(n_hidden),
+            nn.LeakyReLU(0.1),
+            nn.Linear(n_hidden,n_hidden),
+            nn.BatchNorm1d(n_hidden),
+            nn.LeakyReLU(0.1),
+            nn.Linear(n_hidden,n_out),
+            nn.BatchNorm1d(n_out),
+            nn.LeakyReLU(0.1),
+        )
+    
+    def forward(*args, **kwargs):
+        return self.seq(*args, **kwargs)
 
 # %% [markdown]
 # #### Build complete graph network model
@@ -134,20 +103,23 @@ def kernel_nn(data, nodes=16):
 # To specify the size of the "convolutional filter", make use of the `next_neighbors` argument (searches for $k$ next neighbors for each cosmic ray). 
 
 # %%
-points_input = layers.Input((500, 3))
-feats_input = layers.Input((500, 4))
+# points_input = layers.Input((500, 3))
+# feats_input = layers.Input((500, 4))
 
-x = EdgeConv(lambda a: kernel_nn(a, nodes=8), next_neighbors=8)([points_input, feats_input])  # conv with fixed graph
-x = layers.Activation("relu")(x)
-x = EdgeConv(lambda a: kernel_nn(a, nodes=16), next_neighbors=8)([points_input, x])  # conv with fixed graph
-x = layers.Activation("relu")(x)
-x = EdgeConv(lambda a: kernel_nn(a, nodes=32), next_neighbors=8)([x, x])  # conv with dynamic graph
-x = layers.Activation("relu")(x)
-x = layers.GlobalAveragePooling1D(name="embedding")(x)
-out = layers.Dense(2, name="classification", activation="softmax")(x)
+# x = EdgeConv(lambda a: kernel_nn(a, nodes=8), next_neighbors=8)([points_input, feats_input])  # conv with fixed graph
+# x = layers.Activation("relu")(x)
+# x = EdgeConv(lambda a: kernel_nn(a, nodes=16), next_neighbors=8)([points_input, x])  # conv with fixed graph
+# x = layers.Activation("relu")(x)
+# x = EdgeConv(lambda a: kernel_nn(a, nodes=32), next_neighbors=8)([x, x])  # conv with dynamic graph
+# x = layers.Activation("relu")(x)
+# x = layers.GlobalAveragePooling1D(name="embedding")(x)
+# out = layers.Dense(2, name="classification", activation="softmax")(x)
 
-model = keras.models.Model([points_input, feats_input], out)
-print(model.summary())
+# model = keras.models.Model([points_input, feats_input], out)
+# print(model.summary())
+from torch_geometric.nn.conv import EdgeConv
+from torch_geometric.nn.conv import EdgeConv
+
 
 # %% [markdown]
 # You can inspect the kernel network using:
