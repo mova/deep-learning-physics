@@ -35,7 +35,7 @@ class CosmicRayDS(InMemoryDataset):
     def process(self):
         f = np.load(self.raw_file_names[0])
         x = torch.tensor(f["data"]).float()
-        y = torch.tensor(f["label"].astype("int"))
+        y = torch.tensor(f["label"])
         n_events,n_points,_=x.shape
 
         data_list = []

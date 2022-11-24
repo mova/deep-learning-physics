@@ -125,14 +125,14 @@ class FFN(nn.Module):
 
 # model = keras.models.Model([points_input, feats_input], out)
 # print(model.summary())
-from torch_geometric.nn.conv import EdgeConv
-from torch_geometric.nn import knn_graph
+
+from torch_geometric.nn import knn_graph, EdgeConv, global_add_pool
 
 class GNN(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.conv1=EdgeConv(FFN(1,5))
-        self.conv2=EdgeConv(FFN(5,5))
+        self.conv1=EdgeConv(FFN(4*2,10))
+        self.conv2=EdgeConv(FFN(10*2,5))
         self.out = FFN(5,1)
     
     def forward(self,batch:Batch):
@@ -140,18 +140,29 @@ class GNN(nn.Module):
         # knn needs to know about the batches, otherwise it connects 
         # points from different events
         edge_index = knn_graph(batch.pos, batch=batch.batch, k=10)
-        batch.x = self.conv1(batch.x,edge_index=edge_index)
-        batch.x = self.conv2(batch.x,edge_index=edge_index)
-        batch.x = self.out(batch.x)
+        x = torch.hstack([batch.x, batch.pos])
+        x = self.conv1(x,edge_index=edge_index)
+        x = self.conv2(x,edge_index=edge_index)
+        x= global_add_pool(x, batch.batch)
+        x = self.out(x)
+        return x.squeeze()
 
 
 # %%
 from torch_geometric.loader import DataLoader
 loader = DataLoader(ds_train, batch_size=32)
 model = GNN()
-for batch in loader:
-    foo = model(batch)
-    break
+optim = torch.optim.Adam(model.parameters(), lr=1e-4)
+loss_f = nn.BCEWithLogitsLoss()
+
+for ibatch, batch in enumerate(loader):
+    optim.zero_grad()
+    loss = loss_f(model(batch), batch.y)
+    loss.backward()
+    optim.step()
+    if ibatch % 10 ==0:
+        print(model.conv1.nn.seq[0].weight[:3])
+        print(f"{ibatch}: {loss}")
 #%%
 # %%
 # %% [markdown]
