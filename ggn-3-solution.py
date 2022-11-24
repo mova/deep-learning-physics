@@ -1,4 +1,5 @@
 # %% [markdown]
+# Adapted from https://github.com/DeepLearningForPhysicsResearchBook/deep-learning-physics/blob/main/Exercise_10_1.ipynb
 # ## Task 2
 # ## Signal Classification using Dynamic Graph Convolutional Neural Networks
 # After a long journey through the universe before reaching the earth, the cosmic particles interact with the galactic magnetic field $B$.
