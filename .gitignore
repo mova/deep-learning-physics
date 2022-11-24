@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+processed/
+raw/
+cr_sphere.npz
