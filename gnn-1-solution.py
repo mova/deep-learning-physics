@@ -1,5 +1,5 @@
 # %% [markdown]
-# # GNN Warmeup
+# # Graph Handling
 # For this exercise we will learn to use `pytorch_geometric` (PyG) to run GNNs.
 # The library comes with a comprehensive [documentation](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html) and not only provides tools to handle graphs but also provides a large set of GNN specific layers and dataset.
 
@@ -47,9 +47,9 @@ tree = Data(
 from torch_geometric.utils import to_networkx
 import networkx as nx
 
-nx.draw(to_networkx(tree))
+nx.draw_kamada_kawai(to_networkx(tree))
 # %%
-nx.draw(to_networkx(cycle))
+nx.draw_kamada_kawai(to_networkx(cycle))
 # %% [markdown]
 # ## Task 1.4
 # Have a look at the documentation on [Mini-batches](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#mini-batches)

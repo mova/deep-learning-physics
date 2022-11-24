@@ -1,6 +1,6 @@
 # %% [markdown]
 # Adapted from https://github.com/DeepLearningForPhysicsResearchBook/deep-learning-physics/blob/main/Exercise_10_1.ipynb
-# ## Task 2
+# ## Task 3
 # ## Signal Classification using Dynamic Graph Convolutional Neural Networks
 # After a long journey through the universe before reaching the earth, the cosmic particles interact with the galactic magnetic field $B$.
 # As these particles carry a charge $q$ they are deflected in the field by the Lorentz force $F = q \cdot v × B$.
@@ -27,7 +27,7 @@ ds_train, ds_test = ds[:-n_test], ds[-n_test:]
 
 
 # %% [markdown]
-# ## Task 2.1
+# ## Task 3.1
 # Extract a single event from the test dataset and inspect it.
 # Plot an example sky map using the `skymap` function from `utils`
 #%%
@@ -37,7 +37,7 @@ event0 = ds_test[0]
 fig = skymap(event0.pos, c=event0.x, zlabel="Energy (normed)", title="Event 0")
 
 # %% [markdown]
-# ## Task 2.2
+# ## Task 3.2
 # Generate edges for the event using `knn_graph`.
 # Plot the edges by passing the `edge_index` to the `skymap` function. How does the number of edges scale with the $k$?
 # %%
@@ -55,7 +55,7 @@ fig = skymap(
 
 
 # %% [markdown]
-# ## Task 2.3
+# ## Task 3.3
 # Write a class to return a simple Feed-Forward-Network (FFN) for a given number inputs and outputs. (3 layers, 20 hidden nodes, BatchNorm, LeakyReLU)
 # %%
 class FFN(nn.Module):
@@ -76,7 +76,7 @@ class FFN(nn.Module):
 
 
 # %% [markdown]
-# ## Task 2.4
+# ## Task 3.4
 # GNNs classifiers are frequently build in a two step process: First MessagePassingLayers( aka Graph [Convolutional Layers](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#convolutional-layers) ) update the nodes. These exploit the local information. Then, the nodes are aggregated using [Pooling Layers](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#pooling-layers), reducing the graph to a single feature vector. This feature vector is then passed through a FFN to get the classification output.
 # Have a look at the documentation of [EdgeConv](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.conv.EdgeConv) and [DynamicEdgeConv](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.conv.DynamicEdgeConv).
 # What is the difference?
@@ -119,7 +119,7 @@ class GNN(nn.Module):
 
 
 # %% [markdown]
-# ## Task 2.5
+# ## Task 3.5
 # Fill in  the gaps to implement a training loop.
 # > The [`BCEWithLogitsLoss`](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html) is recommended as it combines a Sigmoid layer and the `BCELoss`.
 
@@ -146,7 +146,7 @@ for iepoch in range(1):
 
 # %%
 # %% [markdown]
-# ## Task 2.6
+# ## Task 3.6
 # Collect the outputs for the test set.
 
 # %%
@@ -160,7 +160,7 @@ with torch.no_grad():
         output_list.append(torch.vstack([batch.y.float(), model(batch)]))
 ytrue, yhat = torch.hstack(output_list).cpu().numpy()
 # %% [markdown]
-# ## Task 2.7
+# ## Task 3.7
 # Evalutate the model performance on the test set by computing the AUC.
 
 # %%
@@ -169,5 +169,5 @@ from sklearn.metrics import roc_auc_score
 roc_auc_score(ytrue, yhat)
 # %%
 # %% [markdown]
-# ## Task 2.8 - Bonus/Open end
+# ## Task 3.8 - Bonus/Open end
 # Optimize the model for AUC and speed.
