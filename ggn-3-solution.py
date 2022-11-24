@@ -57,6 +57,7 @@ fig = skymap(
 # %% [markdown]
 # ## Task 3.3
 # Write a class to return a simple Feed-Forward-Network (FFN) for a given number inputs and outputs. (3 layers, 20 hidden nodes, BatchNorm, LeakyReLU)
+# The final layer has neither activation nor norm.
 # %%
 class FFN(nn.Module):
     def __init__(self, n_in, n_out, n_hidden=20):
@@ -155,7 +156,6 @@ model.eval()
 output_list = []
 with torch.no_grad():
     for batch in tqdm(loader):
-        optim.zero_grad()
         batch = batch.to(device)
         output_list.append(torch.vstack([batch.y.float(), model(batch)]))
 ytrue, yhat = torch.hstack(output_list).cpu().numpy()
