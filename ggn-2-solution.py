@@ -28,22 +28,9 @@ n_test = 10000
 ds_train, ds_test = ds[:-n_test], ds[-n_test:]
 # %%
 
-# Data Handling of Graphs [https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html]
-# A graph is used to model pairwise relations (edges) between objects (nodes). A single graph in PyG is described by an instance of torch_geometric.data.Data, which holds the following attributes by default:
-#     data.x: Node feature matrix with shape [num_nodes, num_node_features]
-#     data.edge_index: Graph connectivity in COO format with shape [2, num_edges] and type torch.long
-#     data.edge_attr: Edge feature matrix with shape [num_edges, num_edge_features]
-#     data.y: Target to train against (may have arbitrary shape), e.g., node-level targets of shape [num_nodes, *] or graph-level targets of shape [1, *]
-#     data.pos: Node position matrix with shape [num_nodes, num_dimensions]
-
 # %% [markdown]
 # Extract a single event from the test dataset.
-# Inspect are the properties of the event accessable?
-# You can use the `inspect` method of the rich library or a simple `print`
 
-example_map = ds_test[0]
-# import rich
-# rich.inspect(example_map)
 # %%
 # %% [markdown]
 # Plot an example sky map using the `skymap` function from `utils`

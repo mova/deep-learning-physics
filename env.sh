@@ -10,7 +10,7 @@ pip install torch-sparse -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 pip install torch-cluster -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 pip install torch-spline-conv -f https://data.pyg.org/whl/torch-${TORCH}+${CUDA}.html
 pip install torch-geometric
-pip install gdown sklearn matplotlib torchinfo black
+pip install gdown sklearn matplotlib torchinfo black networkx
 
 pip install tensorflow
 pip install spektral
