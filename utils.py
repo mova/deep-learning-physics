@@ -2,7 +2,7 @@ import torch
 import os
 import gdown
 from torch_geometric.data import InMemoryDataset, Data, Batch
-import numpy as np 
+import numpy as np
 
 from matplotlib import pyplot as plt
 
@@ -20,7 +20,6 @@ class CosmicRayDS(InMemoryDataset):
     def processed_file_names(self):
         return ["data.pt"]
 
-
     # def len(self):
     #     return len(self.data)
 
@@ -36,11 +35,13 @@ class CosmicRayDS(InMemoryDataset):
         f = np.load(self.raw_file_names[0])
         x = torch.tensor(f["data"]).float()
         y = torch.tensor(f["label"])
-        n_events,n_points,_=x.shape
+        n_events, n_points, _ = x.shape
 
         data_list = []
         for idx in range(len(x)):
-            data_list.append(Data(x=x[idx, :, 3].reshape(-1,1), pos=x[idx, :, :3], y=y[idx]))
+            data_list.append(
+                Data(x=x[idx, :, 3].reshape(-1, 1), pos=x[idx, :, :3], y=y[idx])
+            )
             # data_list[-1].num_nodes=n_points
 
         # if self.pre_filter is not None:
@@ -66,9 +67,26 @@ def skymap(v, c=None, zlabel="", title="", **kwargs):
     ax = fig.add_axes([0.1, 0.1, 0.85, 0.9], projection="hammer")
     events = ax.scatter(lons, lats, c=c, s=12, lw=2)
 
-    cbar = plt.colorbar(
+    plt.colorbar(
         events, orientation="horizontal", shrink=0.85, pad=0.05, aspect=30, label=zlabel
     )
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     return fig
+
+
+from collections import defaultdict
+
+
+class MetricAggr:
+    def __init__(self, log_interval: int = 20) -> None:
+        self.log_interval = log_interval
+        self.storage = defaultdict(list)
+
+    def __call__(self, val_name: str, val):
+        val_store = self.storage[val_name]
+        val_store.append(val)
+        if len(val_store) == self.log_interval:
+            print(f"{val_name}: {np.mean(val_store)}")
+            self.storage[val_name] = []
+metric_aggr = MetricAggr()
