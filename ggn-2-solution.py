@@ -1,5 +1,5 @@
 # %% [markdown]
-# # Exercise 10.1 - Solution
+# # Task 2
 # ## Signal Classification using Dynamic Graph Convolutional Neural Networks
 # After a long journey through the universe before reaching the earth, the cosmic particles interact with the galactic magnetic field $B$.
 # As these particles carry a charge $q$ they are deflected in the field by the Lorentz force $F = q \cdot v × B$.
@@ -17,10 +17,6 @@ from torch_geometric.data import Data, Batch
 import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-# %% [markdown]
-# ### Download Data
-
-# %%
 from utils import CosmicRayDS
 
 ds = CosmicRayDS(".")
@@ -28,29 +24,38 @@ n_test = 10000
 ds_train, ds_test = ds[:-n_test], ds[-n_test:]
 # %%
 
-# %% [markdown]
-# Extract a single event from the test dataset.
 
-# %%
 # %% [markdown]
+# # Task 2.1
+# Extract a single event from the test dataset and inspect it.
 # Plot an example sky map using the `skymap` function from `utils`
+#%%
 from utils import skymap
-
-fig = skymap(
-    example_map.pos.T, c=example_map.x, zlabel="Energy (normed)", title="Event 0"
+event0 = ds_test[0]
+fig=skymap(
+    event0.pos, c=event0.x, zlabel="Energy (normed)", title="Event 0"
 )
 
+# %% [markdown]
+# # Task 2.2
+# Generate edges for the event using `knn_graph`. 
+# Plot the edges by passing the `edge_index` to the `skymap` function. How does the number of edges scale with the $k$?
 # %%
+from torch_geometric.nn import knn_graph
+
+
+fig=skymap(
+    event0.pos, c=event0.x, edge_index=knn_graph(event0.pos, k=3), zlabel="Energy (normed)", title="Event 0"
+)
+# -> k*num_nodes
 
 
 # %% [markdown]
-# ### Design DGCNN
-
-# %% [markdown]
-
-
+# # Task 2.3
+# Write a class to return a simple Feed-Forward-Network (FFN) for a given number inputs and outputs. (3 layers, 20 hidden nodes, BatchNorm, LeakyReLU)
+# %%
 class FFN(nn.Module):
-    def __init__(self, n_in, n_out, n_hidden=20) -> None:
+    def __init__(self, n_in, n_out, n_hidden=20):
         super().__init__()
         self.seq = nn.Sequential(
             nn.Linear(n_in, n_hidden),
@@ -60,8 +65,6 @@ class FFN(nn.Module):
             nn.BatchNorm1d(n_hidden),
             nn.LeakyReLU(0.1),
             nn.Linear(n_hidden, n_out),
-            nn.BatchNorm1d(n_out),
-            # nn.LeakyReLU(0.1),
         )
 
     def forward(self, *args, **kwargs):
@@ -69,7 +72,10 @@ class FFN(nn.Module):
 
 
 # %% [markdown]
-# #### Build complete graph network model
+# GNNs classifiers are frequently build in a two step process: First MessagePassingLayers( aka Graph [Convolutional Layers](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#convolutional-layers) ) update the nodes. These exploit the local information. Then, the nodes are aggregated using [Pooling Layers](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#pooling-layers), reducing the graph to a single feature vector. This feature vector is then passed through a FFN to get the classification output.
+# Have a look at the documentation of [EdgeConv][(https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.conv.EdgeConv) and [DynamicEdgeConv](https://pytorch-geometric.readthedocs.io/en/latest/modules/nn.html#torch_geometric.nn.conv.DynamicEdgeConv).
+
+# # Build complete graph network model
 # In the first layer, it might be advantageous to choose the next neighbors using the coordinates of the cosmic ray but perform the convolution using their energies also.
 # Thus, we input `y = EdgeConv(...)[points_input, feats_input]` into the first EdgeConv layer.
 # If we later want to perform a dynamic EdgeConv (we want to update the graph), we simply input `z = EdgeConv(...)(y)`.

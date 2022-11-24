@@ -60,11 +60,14 @@ batch = Batch.from_data_list([tree, cycle])
 nx.draw(to_networkx(batch))
 # -> The Graphs are combined to a larger graph.
 
-# %%
+
+# %% [markdown]
 # ## Task 1.5
 # Inspect the properties of the batch. 
-# You can use the `inspect` method of the rich library or a simple `print`
-
-example_map = ds_test[0]
-# import rich
-# rich.inspect(example_map)
+# You can use the `inspect` method of the rich library or a simple `print`.
+# What do the `batch` and `ptr` attributes do?
+# %%
+import rich
+rich.inspect(batch)
+# -> `batch` provides the index for teh feature  matrix of each graph in the feature vector of the batch
+# -> `ptr` does the same, but with a range

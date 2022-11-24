@@ -54,18 +54,26 @@ class CosmicRayDS(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 
-def skymap(v, c=None, zlabel="", title="", **kwargs):
-    def vec2ang(v):
-        x, y, z = np.asarray(v)
-        phi = np.arctan2(y, x)
-        theta = np.arctan2(z, (x * x + y * y) ** 0.5)
-        return phi, theta
+def vec2ang(v):
+    x, y, z = np.asarray(v).T
+    phi = np.arctan2(y, x)
+    theta = np.arctan2(z, (x * x + y * y) ** 0.5)
+    return np.vstack([phi, theta]).T
 
-    lons, lats = vec2ang(v)
+
+def skymap(v, c=None, edge_index=None, zlabel="", title="", **kwargs):
+    pos_ang= vec2ang(v)
+    lons, lats = pos_ang.T
     lons = -lons
     fig = plt.figure(figsize=kwargs.pop("figsize", [12, 6]))
     ax = fig.add_axes([0.1, 0.1, 0.85, 0.9], projection="hammer")
     events = ax.scatter(lons, lats, c=c, s=12, lw=2)
+    
+    
+    if edge_index is not None:
+        x = pos_ang[:,0][edge_index]
+        y = pos_ang[:,1][edge_index]
+        ax.plot(-x,y, linestyle='-', linewidth=.5)
 
     plt.colorbar(
         events, orientation="horizontal", shrink=0.85, pad=0.05, aspect=30, label=zlabel
@@ -73,6 +81,7 @@ def skymap(v, c=None, zlabel="", title="", **kwargs):
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     return fig
+
 
 
 from collections import defaultdict
