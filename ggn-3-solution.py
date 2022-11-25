@@ -56,7 +56,7 @@ class CosmicRayDS(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 ds = CosmicRayDS(".")
-
+# %% [markdown]
 # ## Task 3
 # ## Signal Classification using Dynamic Graph Convolutional Neural Networks
 # After a long journey through the universe before reaching the earth, the cosmic particles interact with the galactic magnetic field $B$.
@@ -247,7 +247,7 @@ for iepoch in range(1):
 # Collect the outputs for the test set.
 
 # %%
-loader = DataLoader(ds_test, batch_size=6, shuffle=True)
+loader = DataLoader(ds_test, batch_size=64, shuffle=True)
 model.eval()
 output_list = []
 with torch.no_grad():
