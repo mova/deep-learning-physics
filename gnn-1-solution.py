@@ -3,6 +3,28 @@
 # For this exercise we will learn to use `pytorch_geometric` (PyG) to run GNNs.
 # The library comes with a comprehensive [documentation](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html) and not only provides tools to handle graphs but also provides a large set of GNN specific layers and dataset.
 
+# %%
+# Add this in a Google Colab cell to install the correct version of Pytorch Geometric.
+import torch
+
+def format_pytorch_version(version):
+  return version.split('+')[0]
+
+TORCH_version = torch.__version__
+TORCH = format_pytorch_version(TORCH_version)
+
+def format_cuda_version(version):
+  return 'cu' + version.replace('.', '')
+
+CUDA_version = torch.version.cuda
+CUDA = format_cuda_version(CUDA_version)
+
+!pip install torch-scatter -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-sparse -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-cluster -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-spline-conv -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-geometric matplotlib networkx rich
+
 # %% [markdown]
 # ## Task 1.1
 # [Data Handling of Graphs](https://pytorch-geometric.readthedocs.io/en/latest/notes/introduction.html#data-handling-of-graphs) offers a nice introduction into handling graphs.

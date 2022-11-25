@@ -20,12 +20,6 @@ class CosmicRayDS(InMemoryDataset):
     def processed_file_names(self):
         return ["data.pt"]
 
-    # def len(self):
-    #     return len(self.data)
-
-    # def get(self, idx):
-    #     return self.data[idx]
-
     def download(self):
         url = "https://drive.google.com/u/0/uc?export=download&confirm=HgGH&id=1XKN-Ik7BDyMWdQ230zWS2bNxXL3_9jZq"
         if os.path.exists(self.raw_file_names[0]) == False:
@@ -36,20 +30,11 @@ class CosmicRayDS(InMemoryDataset):
         x = torch.tensor(f["data"]).float()
         y = torch.tensor(f["label"]).float()
         n_events, n_points, _ = x.shape
-
         data_list = []
         for idx in range(len(x)):
             data_list.append(
                 Data(x=x[idx, :, 3].reshape(-1, 1), pos=x[idx, :, :3], y=y[idx])
             )
-            # data_list[-1].num_nodes=n_points
-
-        # if self.pre_filter is not None:
-        #     data_list = [data for data in data_list if self.pre_filter(data)]
-
-        # if self.pre_transform is not None:
-        #     data_list = [self.pre_transform(data) for data in data_list]
-
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
@@ -68,7 +53,6 @@ def skymap(v, c=None, edge_index=None, zlabel="", title="", **kwargs):
     fig = plt.figure(figsize=kwargs.pop("figsize", [12, 6]))
     ax = fig.add_axes([0.1, 0.1, 0.85, 0.9], projection="hammer")
     events = ax.scatter(lons, lats, c=c, s=12, lw=2)
-    
     
     if edge_index is not None:
         x = pos_ang[:,0][edge_index]

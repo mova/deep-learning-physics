@@ -18,7 +18,7 @@ CUDA = format_cuda_version(CUDA_version)
 !pip install torch-cluster -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
 !pip install torch-spline-conv -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
 !pip install torch-geometric
-!pip install gdown sklearn matplotlib torchinfo black networkx
+!pip install gdown sklearn matplotlib torchinfo black networkx rich
 
 from utils import CosmicRayDS
 

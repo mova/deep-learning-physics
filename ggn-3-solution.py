@@ -1,5 +1,62 @@
 # %% [markdown]
 # Adapted from https://github.com/DeepLearningForPhysicsResearchBook/deep-learning-physics/blob/main/Exercise_10_1.ipynb
+# %%
+import torch
+
+def format_pytorch_version(version):
+  return version.split('+')[0]
+
+TORCH_version = torch.__version__
+TORCH = format_pytorch_version(TORCH_version)
+
+def format_cuda_version(version):
+  return 'cu' + version.replace('.', '')
+
+CUDA_version = torch.version.cuda
+CUDA = format_cuda_version(CUDA_version)
+
+!pip install torch-scatter -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-sparse -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-cluster -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-spline-conv -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-geometric gdown sklearn matplotlib torchinfo black networkx rich
+
+import os
+import gdown
+from torch_geometric.data import InMemoryDataset, Data, Batch
+
+class CosmicRayDS(InMemoryDataset):
+    def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
+        super().__init__(root, transform, pre_transform, pre_filter)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @property
+    def raw_file_names(self):
+        return ["cr_sphere.npz"]
+
+    @property
+    def processed_file_names(self):
+        return ["data.pt"]
+
+    def download(self):
+        url = "https://drive.google.com/u/0/uc?export=download&confirm=HgGH&id=1XKN-Ik7BDyMWdQ230zWS2bNxXL3_9jZq"
+        if os.path.exists(self.raw_file_names[0]) == False:
+            gdown.download(url, self.raw_file_names[0], quiet=True)
+
+    def process(self):
+        f = np.load(self.raw_file_names[0])
+        x = torch.tensor(f["data"]).float()
+        y = torch.tensor(f["label"]).float()
+        data_list = []
+        for idx in range(len(x)):
+            data_list.append(
+                Data(x=x[idx, :, 3].reshape(-1, 1), pos=x[idx, :, :3], y=y[idx])
+            )
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+
+ds = CosmicRayDS(".")
+
 # ## Task 3
 # ## Signal Classification using Dynamic Graph Convolutional Neural Networks
 # After a long journey through the universe before reaching the earth, the cosmic particles interact with the galactic magnetic field $B$.
@@ -18,9 +75,7 @@ from torch_geometric.data import Data, Batch
 import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
-from utils import CosmicRayDS
 
-ds = CosmicRayDS(".")
 n_test = 10000
 ds_train, ds_test = ds[:-n_test], ds[-n_test:]
 # %%
@@ -31,7 +86,33 @@ ds_train, ds_test = ds[:-n_test], ds[-n_test:]
 # Extract a single event from the test dataset and inspect it.
 # Plot an example sky map using the `skymap` function from `utils`
 #%%
-from utils import skymap
+def vec2ang(v):
+    x, y, z = np.asarray(v).T
+    phi = np.arctan2(y, x)
+    theta = np.arctan2(z, (x * x + y * y) ** 0.5)
+    return np.vstack([phi, theta]).T
+
+def skymap(v, c=None, edge_index=None, zlabel="", title="", **kwargs):
+    pos_ang= vec2ang(v)
+    lons, lats = pos_ang.T
+    lons = -lons
+    fig = plt.figure(figsize=kwargs.pop("figsize", [12, 6]))
+    ax = fig.add_axes([0.1, 0.1, 0.85, 0.9], projection="hammer")
+    events = ax.scatter(lons, lats, c=c, s=12, lw=2)
+    
+    if edge_index is not None:
+        x = pos_ang[:,0][edge_index]
+        y = pos_ang[:,1][edge_index]
+        ax.plot(-x,y, linestyle='-', linewidth=.5)
+
+    plt.colorbar(
+        events, orientation="horizontal", shrink=0.85, pad=0.05, aspect=30, label=zlabel
+    )
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    return fig
+
+
 
 event0 = ds_test[0]
 fig = skymap(event0.pos, c=event0.x, zlabel="Energy (normed)", title="Event 0")
@@ -123,10 +204,25 @@ class GNN(nn.Module):
 # ## Task 3.5
 # Fill in  the gaps to implement a training loop.
 # > The [`BCEWithLogitsLoss`](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html) is recommended as it combines a Sigmoid layer and the `BCELoss`.
+# %%
+from collections import defaultdict
+class MetricAggr:
+    def __init__(self, log_interval: int = 20) -> None:
+        self.log_interval = log_interval
+        self.storage = defaultdict(list)
+
+    def __call__(self, val_name: str, val):
+        val_store = self.storage[val_name]
+        val_store.append(val)
+        if len(val_store) == self.log_interval:
+            print(f"{val_name}: {np.mean(val_store)}")
+            self.storage[val_name] = []
+metric_aggr = MetricAggr()
+
 
 # %%
 from torch_geometric.loader import DataLoader
-from utils import metric_aggr
+
 
 device = torch.device("cuda")
 loader = DataLoader(ds_train, batch_size=64, shuffle=True)

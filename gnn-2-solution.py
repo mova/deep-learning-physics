@@ -1,6 +1,25 @@
 # %% [markdown]
 # Adapted from https://pytorch-geometric.readthedocs.io/en/latest/notes/colabs.html
+# %%
+import torch
 
+def format_pytorch_version(version):
+  return version.split('+')[0]
+
+TORCH_version = torch.__version__
+TORCH = format_pytorch_version(TORCH_version)
+
+def format_cuda_version(version):
+  return 'cu' + version.replace('.', '')
+
+CUDA_version = torch.version.cuda
+CUDA = format_cuda_version(CUDA_version)
+
+!pip install torch-scatter -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-sparse -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-cluster -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-spline-conv -f https://data.pyg.org/whl/torch-{TORCH}+{CUDA}.html
+!pip install torch-geometric gdown sklearn matplotlib torchinfo black networkx rich
 # %% [markdown]
 # # Introduction: Hands-on Graph Neural Networks
 # 
@@ -145,7 +164,18 @@ print(model)
 # Pass in the initial node features `x` and the graph connectivity information `edge_index` to the model, and visualize its 2-dimensional embedding.
 
 # %%
-from utils import visualize_embedding
+import matplotlib.pyplot as plt
+
+def visualize_embedding(h, color, epoch=None, loss=None):
+    plt.figure(figsize=(7,7))
+    plt.xticks([])
+    plt.yticks([])
+    h = h.detach().cpu().numpy()
+    plt.scatter(h[:, 0], h[:, 1], s=140, c=color, cmap="Set2")
+    if epoch is not None and loss is not None:
+        plt.xlabel(f'Epoch: {epoch}, Loss: {loss.item():.4f}', fontsize=16)
+    plt.show()
+
 
 model = GCN()
 
@@ -180,17 +210,20 @@ visualize_embedding(h, color=data.y)
 
 # %%
 import time
-from IPython.display import Javascript  # Restrict height of output cell.
-display(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 430})'''))
+from IPython.display import Javascript,display_javascript  # Restrict height of output cell.
+display_javascript(Javascript('''google.colab.output.setIframeHeight(0, true, {maxHeight: 430})'''))
 
 model = GCN()
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # Define optimizer.
 
 def train(data):
-    optimizer.zero_grad()  # Clear gradients.
-    out, h = model(data.x, data.edge_index)  # Perform a single forward pass.
-    loss = criterion(out[data.train_mask], data.y[data.train_mask])  # Compute the loss solely based on the training nodes.
+    # Clear gradients.
+    optimizer.zero_grad()  
+    # Perform a single forward pass.
+    out, h = model(data.x, data.edge_index)  
+    # Compute the loss solely based on the training nodes.
+    loss = criterion(out[data.train_mask], data.y[data.train_mask])  
     loss.backward()  # Derive gradients.
     optimizer.step()  # Update parameters based on gradients.
     return loss, h
